@@ -1,6 +1,6 @@
 # Parser class
 from lexer import Lexer, Token
-from ast import AtomicNode, BinaryNode, BlockNode, IfNode, LambdaNode, ListNode, MapNode, Node, ProgramNode, SliceNode, TupleNode, UnaryNode
+from myast import AtomicNode, BinaryNode, BlockNode, IfNode, LambdaNode, ListNode, MapNode, Node, ProgramNode, SliceNode, TupleNode, UnaryNode, CallNode
 
 # Left associative infix operators binding powers
 precedence_left = {
@@ -117,13 +117,27 @@ class Parser:
         """
         prev_comment = self.lexer.prev_comment()
         t = self.lexer.next_token()
-        if t.name in ["IDENTIFIER", "STRING", "NUMBER", "BOOL"]:
-            value = AtomicNode(t.name.lower(), t.value)
+       
+        if t.name == "IDENTIFIER":
+            ident_node = AtomicNode("identifier", t.value)
             nt = self.lexer.peek_token()
-            if nt.name == "RIGHTARROW":
-                return self.__parse_lambda([value])
+            if nt.name == "LPAREN":
+                  self.lexer.next_token()  # consume '('
+                  args = self.__parse_list_of_expressions("COMMA", "RPAREN", True)
+                  return CallNode(t.value, args)
+            elif nt.name == "RIGHTARROW":
+                  return self.__parse_lambda([ident_node])
             else:
-                return value
+             return ident_node
+
+        elif t.name in ["STRING", "NUMBER", "BOOL"]:
+         value = AtomicNode(t.name.lower(), t.value)
+         nt = self.lexer.peek_token()
+         if nt.name == "RIGHTARROW":
+           return self.__parse_lambda([value])
+         else:
+             return value
+                        
         elif t.name == "KEYWORD":
             match t.value:
                 case "if": return self.__parse_if()
