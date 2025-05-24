@@ -7,7 +7,7 @@ print(
 
 pi = 3.141592653589793
 tau = () => 2*pi
-print(tau(), tau())
+print(tau()," ", tau())
 
 f(x) = 2*x + 1
 print(f(2))
@@ -23,4 +23,4 @@ e = (x, y) => {
 	z = x + y
 	z * z
 }
-print(a(), b(1), c(2), d(3, 4), d(5, 6))
+print(a(), b(1), c(2), d(3, 4), e(5, 6))

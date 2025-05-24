@@ -117,34 +117,37 @@ class Parser:
         """
         prev_comment = self.lexer.prev_comment()
         t = self.lexer.next_token()
-       
+        
         if t.name == "IDENTIFIER":
             ident_node = AtomicNode("identifier", t.value)
             nt = self.lexer.peek_token()
             if nt.name == "LPAREN":
-                  self.lexer.next_token()  # consume '('
-                  args = self.__parse_list_of_expressions("COMMA", "RPAREN", True)
-                  return CallNode(t.value, args)
+                self.lexer.next_token()  # consume '('
+                args = self.__parse_list_of_expressions("COMMA", "RPAREN", True)
+                return CallNode(ident_node, args)  # Pass the AtomicNode, not just the string
+
             elif nt.name == "RIGHTARROW":
-                  return self.__parse_lambda([ident_node])
+                return self.__parse_lambda([ident_node])
             else:
-             return ident_node
+                return ident_node
 
         elif t.name in ["STRING", "NUMBER", "BOOL"]:
-         value = AtomicNode(t.name.lower(), t.value)
-         nt = self.lexer.peek_token()
-         if nt.name == "RIGHTARROW":
-           return self.__parse_lambda([value])
-         else:
-             return value
-                        
+            value = AtomicNode(t.name.lower(), t.value)
+            nt = self.lexer.peek_token()
+            if nt.name == "RIGHTARROW":
+                return self.__parse_lambda([value])
+            else:
+                return value
+
         elif t.name == "KEYWORD":
             match t.value:
-                case "if": return self.__parse_if()
-                case _: raise Exception(f"Keyword '{t.value}' is not implemented!")
+                case "if":
+                    return self.__parse_if()
+                case _:
+                    raise Exception(f"Keyword '{t.value}' is not implemented!")
+
         elif t.name == "LPAREN":
             lhs = TupleNode(self.__parse_list_of_expressions("COMMA", "RPAREN", False))
-            # Check for trailing right arrow
             nt = self.lexer.peek_token()
             if nt.name == "RIGHTARROW":
                 return self.__parse_lambda(lhs.elements)
@@ -152,16 +155,22 @@ class Parser:
                 if len(lhs.elements) == 1:
                     lhs = lhs.elements[0]
                 return lhs
+
         elif t.name == "LBRACKET":
             return ListNode(self.__parse_list_of_expressions("COMMA", "RBRACKET", True))
+
         elif t.name == "HASHBRACE":
             return self.__parse_hash_map()
+
         elif t.name == "LBRACE":
             return BlockNode(self.__parse_expressions_until("RBRACE"))
+
         elif t.name in ["MINUS", "NOT"]:
             return UnaryNode(t.name, self.__parse_primary())
+
         else:
             self.__error(f"Expected primary expression but got '{t.name}'", t)
+
 
     def __parse_lambda(self, args: list[Node]) -> LambdaNode:
         """
@@ -197,21 +206,21 @@ class Parser:
                         step = self.__parse_expression()
                     rhs = SliceNode(rhs, end, step)
                 self.__expect("RBRACKET")
+                lhs = BinaryNode(op, lhs, rhs)
             elif op == 'CALL':
-                rhs = TupleNode(self.__parse_list_of_expressions("COMMA", "RPAREN", False))
-                # if self.lexer.peek_token().name == "ASSIGNMENT":
-                #     self.lexer.next_token() # Remove the assignment
-                #     rhs = self.__parse_expression()
-                #     # Convert args to list of strings
-                #     args = self.__ident_list_to_str(args)
-                #     return AssignmentNode(t.value, LambdaNode(args, rhs), prev_comment)
+                # Handle function calls properly
+                args = self.__parse_list_of_expressions("COMMA", "RPAREN", False)
+                lhs = CallNode(lhs, args)  # Create CallNode instead of BinaryNode
             else:
                 rhs = self.__parse_primary()
+                # Continue parsing with higher precedence
+                l_next = self.lexer.peek_token().name
+                while l_next in precedence_left and precedence_left[l_next] > precedence_left[op]:
+                    rhs = self.__parse_binary_expression(rhs, precedence_left[l_next])
+                    l_next = self.lexer.peek_token().name
+                lhs = BinaryNode(op, lhs, rhs)
+            
             l = self.lexer.peek_token().name
-            while l in precedence_left and precedence_left[l] > precedence_left[op]:
-                rhs = self.__parse_binary_expression(rhs, precedence_left[l])
-                l = self.lexer.peek_token().name
-            lhs = BinaryNode(op, lhs, rhs)
         return lhs
 
     def __parse_hash_map(self) -> MapNode:

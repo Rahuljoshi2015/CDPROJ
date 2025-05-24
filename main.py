@@ -19,12 +19,17 @@ def main():
         lexer = Lexer(StringIO(source_code), debug=False)
         parser = Parser(lexer, debug=False)
         ast_tree = parser.parse()
-        print("AST:")
-        print(ast_tree)
+        #print("AST:")
+        #print(ast_tree)
         codegen = LLVMCodeGenerator()
         llvm_ir = codegen.generate_code(ast_tree)
+        
 
-        print(llvm_ir)
+        # ✅ Write LLVM IR to file in UTF-8
+        with open("output.ll", "w", encoding="utf-8") as out_file:
+            out_file.write(llvm_ir)
+
+        print("LLVM IR written to output.ll")
 
     except Exception as e:
         print(f"Compilation failed: {e}")

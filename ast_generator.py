@@ -3,7 +3,7 @@ import sys
 
 from lexer import Lexer
 from parser import Parser
-from ast import AtomicNode, BinaryNode, BlockNode, IfNode, LambdaNode, ListNode, MapNode, Node, ProgramNode, SliceNode, TupleNode, UnaryNode
+from myast import AtomicNode, BinaryNode, BlockNode, IfNode, LambdaNode, ListNode, MapNode, Node, ProgramNode, SliceNode, TupleNode, UnaryNode, IdentifierNode
 
 def main():
     # Check if filename provided as argument
