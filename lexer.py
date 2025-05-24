@@ -233,3 +233,4 @@ class Lexer:
 
     def prev_comment(self):
         return self.__prev_comment
+

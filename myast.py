@@ -4,7 +4,7 @@ class Node():
     """
     def __init__(self, name):
         """
-        Initialize a node with a name
+        Initialize a node with a name.
         """
         self.name = name
 
