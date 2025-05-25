@@ -555,7 +555,7 @@ class LLVMCodeGenerator:
                 elif node.operator == "GREATEREQUAL":
                     return self.builder.icmp_signed(">=", left, right, name="getmp")
 
-        # Logical operations
+        # Logical operations.
         elif node.operator == "AND":
             left_bool = self._convert_to_bool(left)
             right_bool = self._convert_to_bool(right)
