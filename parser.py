@@ -125,7 +125,6 @@ class Parser:
                 self.lexer.next_token()  # consume '('
                 args = self.__parse_list_of_expressions("COMMA", "RPAREN", True)
                 return CallNode(ident_node, args)  # Pass the AtomicNode, not just the string
-
             elif nt.name == "RIGHTARROW":
                 return self.__parse_lambda([ident_node])
             else:
@@ -170,7 +169,6 @@ class Parser:
 
         else:
             self.__error(f"Expected primary expression but got '{t.name}'", t)
-
 
     def __parse_lambda(self, args: list[Node]) -> LambdaNode:
         """
@@ -282,4 +280,6 @@ class Parser:
         while not self.lexer.is_done():
             e = self.__parse_expression()
             program.expressions.append(e)
+        print("Parsed AST:")  # Debugging: Print the AST
+        print(program)
         return program
