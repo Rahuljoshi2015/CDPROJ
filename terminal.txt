@@ -1,0 +1,106 @@
+
+Atomic result: i32 2 (type: i32)
+Left operand: %"load_x" = load double, double* %"x" (type: double), Right operand: i32 2 (type: i32)
+Binary result: %"modtmp" = frem double %"load_x", %"promote" (type: double)
+Generating expr: number(0)
+Atomic result: i32 0 (type: i32)
+Left operand: %"modtmp" = frem double %"load_x", %"promote" (type: double), Right operand: i32 0 (type: i32)
+Binary result: %"eqtmp" = fcmp oeq double %"modtmp", %"promote.1" (type: i1)
+Lambda lambda_28 stored, symbol_table keys: ['my_list', 'add_one', 'a', 'lambda_1', 'lambda_2', 'lambda_3', 'lambda_4', 'lambda_5', 'lambda_6', 'lambda_7', 'lambda_8', 'b', 'lambda_9', 'lambda_10', 'lambda_11', 'lambda_12', 'lambda_13', 'lambda_14', 'lambda_15', 'lambda_16', 'c', 'lambda_17', 'lambda_18', 'lambda_19', 'lambda_20', 'lambda_21', 'lambda_22', 'd', 'lambda_23', 'lambda_24', 'lambda_25', 'lambda_26', 'lambda_27', 'lambda_28']
+Lambda result: define i1 @"lambda_28"(double %".1")
+{
+entry:
+  %"x" = alloca double
+  store double %".1", double* %"x"
+  %"load_x" = load double, double* %"x"
+  %"promote" = sitofp i32 2 to double
+  %"modtmp" = frem double %"load_x", %"promote"
+  %"promote.1" = sitofp i32 0 to double
+  %"eqtmp" = fcmp oeq double %"modtmp", %"promote.1"
+  ret i1 %"eqtmp"
+}
+ (type: i1 (double)*)
+Generating list_group_by with list size: 9, element type: double
+Calling group function define i1 @"lambda_28"(double %".1")
+{
+entry:
+  %"x" = alloca double
+  store double %".1", double* %"x"
+  %"load_x" = load double, double* %"x"
+  %"promote" = sitofp i32 2 to double
+  %"modtmp" = frem double %"load_x", %"promote"
+  %"promote.1" = sitofp i32 0 to double
+  %"eqtmp" = fcmp oeq double %"modtmp", %"promote.1"
+  ret i1 %"eqtmp"
+}
+ with arg: %"group_load.5" = load double, double* %"group_elem.5" (type: double)
+Call result: %"group_result.5" = alloca {[9 x double], [9 x double], i32, i32} (type: {[9 x double], [9 x double], i32, i32}*)
+Generating expr: #{bool(False): [number(1), number(3), number(5), number(7), number(9)], bool(True): [number(2), number(4), number(6), number(8)]}
+Generating expr: [number(1), number(3), number(5), number(7), number(9)]
+Generating expr: number(1)
+Atomic result: i32 1 (type: i32)
+Generating expr: number(3)
+Atomic result: i32 3 (type: i32)
+Generating expr: number(5)
+Atomic result: i32 5 (type: i32)
+Generating expr: number(7)
+Atomic result: i32 7 (type: i32)
+Generating expr: number(9)
+Atomic result: i32 9 (type: i32)
+List result: %"list_15" = alloca [5 x double] (type: [5 x double]*)
+Generating expr: [number(2), number(4), number(6), number(8)]
+Generating expr: number(2)
+Atomic result: i32 2 (type: i32)
+Generating expr: number(4)
+Atomic result: i32 4 (type: i32)
+Generating expr: number(6)
+Atomic result: i32 6 (type: i32)
+Generating expr: number(8)
+Atomic result: i32 8 (type: i32)
+List result: %"list_16" = alloca [4 x double] (type: [4 x double]*)
+Generating expr: [number(1), number(3), number(5), number(7), number(9)]
+Generating expr: number(1)
+Atomic result: i32 1 (type: i32)
+Generating expr: number(3)
+Atomic result: i32 3 (type: i32)
+Generating expr: number(5)
+Atomic result: i32 5 (type: i32)
+Generating expr: number(7)
+Atomic result: i32 7 (type: i32)
+Generating expr: number(9)
+Atomic result: i32 9 (type: i32)
+List result: %"list_17" = alloca [5 x double] (type: [5 x double]*)
+Generating expr: [number(2), number(4), number(6), number(8)]
+Generating expr: number(2)
+Atomic result: i32 2 (type: i32)
+Generating expr: number(4)
+Atomic result: i32 4 (type: i32)
+Generating expr: number(6)
+Atomic result: i32 6 (type: i32)
+Generating expr: number(8)
+Atomic result: i32 8 (type: i32)
+List result: %"list_18" = alloca [4 x double] (type: [4 x double]*)
+Left operand: %"group_result.5" = alloca {[9 x double], [9 x double], i32, i32} (type: {[9 x double], [9 x double], i32, i32}*), Right operand: %"map_struct" = alloca {[5 x double]*, [4 x double]*, i32, i32} (type: {[5 x double]*, [4 x double]*, i32, i32}*)
+Binary result: %"eq_final.9" = load i1, i1* %"eq_result.9" (type: i1)
+Print format string: %s
+Call result: %"calltmp_newline.14" = call i32 (i8*, ...) @"printf"(i8* %"str_ptr_136") (type: i32)
+Generating expr: identifier(print)('Range:', (number(0) RANGE number(10)), ((number(0) RANGE number(10)) EQUAL [number(0), number(1), number(2), number(3), number(4), number(5), number(6), number(7), number(8), number(9)]))
+Generating call: identifier(print)('Range:', (number(0) RANGE number(10)), ((number(0) RANGE number(10)) EQUAL [number(0), number(1), number(2), number(3), number(4), number(5), number(6), number(7), number(8), number(9)]))
+Generating print call with args: [<myast.AtomicNode object at 0x00000185103A96D0>, <myast.BinaryNode object at 0x00000185103A9E50>, <myast.BinaryNode object at 0x00000185103AA6F0>]
+Generating expr: 'Range:'
+Atomic result: %"str_ptr_137" = getelementptr [7 x i8], [7 x i8]* @"str_137", i32 0, i32 0 (type: i8*)
+Print format string: %s
+Generating expr: (number(0) RANGE number(10))
+Generating binary op: RANGE (number(0), number(10))
+Generating expr: number(0)
+Atomic result: i32 0 (type: i32)
+Generating expr: number(10)
+Atomic result: i32 10 (type: i32)
+Left operand: i32 0 (type: i32), Right operand: i32 10 (type: i32)
+Generating expr: number(0)
+Atomic result: i32 0 (type: i32)
+Generating expr: number(10)
+Atomic result: i32 10 (type: i32)
+Compilation failed: Error generating code for: identifier(print)('Range:', (number(0) RANGE number(10)), ((number(0) RANGE number(10)) EQUAL [number(0), number(1), number(2), number(3), number(4), number(5), number(6), number(7), number(8), number(9)]))
+Reason: %d format: a real number is required, not SelectInstr
+PS C:\Users\rahul\cdproj3> 

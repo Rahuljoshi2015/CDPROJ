@@ -5,9 +5,9 @@ a = {
 		c * 2
 	}
 	print("b =", b)
-	// print("c =", c) // Should be an error
-	// b + c // Should be an error
-	b - 9
+    //print("c =", c) 
+    //b + c 
+	  b - 9
 }
 print("a =", a * 2)
 

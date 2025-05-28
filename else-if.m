@@ -14,4 +14,11 @@ rec(x) = {
 		x + rec(x - 1)
 	}
 }
+
 print(rec(10))
+if 24/2==12 {
+	print("done")
+			}
+else
+	print("not done")
+

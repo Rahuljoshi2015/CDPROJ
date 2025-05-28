@@ -1,6 +1,6 @@
 # Parser class
 from lexer import Lexer, Token
-from myast import AtomicNode, BinaryNode, BlockNode, IfNode, LambdaNode, ListNode, MapNode, Node, ProgramNode, SliceNode, TupleNode, UnaryNode, CallNode
+from myast import AtomicNode, BinaryNode, BlockNode, IfNode, LambdaNode, ListNode, MapNode, Node, ProgramNode, SliceNode, TupleNode, UnaryNode, CallNode,ForNode,LazyRangeNode
 
 # Left associative infix operators binding powers
 precedence_left = {
@@ -110,6 +110,29 @@ class Parser:
                 raise Exception(f"Lambda argument '{e}' is not an identifier!")
             result.append(e.value)
         return result
+    def __parse_for(self) -> ForNode:
+        """
+        Parse a for loop from the lexer.
+        Example: for x in [1, 2, 3] print(x) or for y in 1..10 print(y)
+        """
+        # Expect the loop variable
+        var_token = self.__expect("IDENTIFIER")
+        var_name = var_token.value
+
+        # Expect 'in' keyword
+        self.__expect("IN")
+
+        # Parse the iterable (list or range expression)
+        iterable = self.__parse_expression()
+
+        # Convert range expression to LazyRangeNode for for-loop context
+        if isinstance(iterable, BinaryNode) and iterable.operator == "RANGE":
+            iterable = LazyRangeNode(iterable.left, iterable.right)
+
+        # Parse the body (expression or block)
+        body = self.__parse_expression()
+
+        return ForNode(var_name, iterable, body)
 
     def __parse_primary(self) -> Node:
         """
@@ -124,7 +147,7 @@ class Parser:
             if nt.name == "LPAREN":
                 self.lexer.next_token()  # consume '('
                 args = self.__parse_list_of_expressions("COMMA", "RPAREN", True)
-                return CallNode(ident_node, args)  # Pass the AtomicNode, not just the string
+                return CallNode(ident_node, args)
             elif nt.name == "RIGHTARROW":
                 return self.__parse_lambda([ident_node])
             else:
@@ -142,6 +165,8 @@ class Parser:
             match t.value:
                 case "if":
                     return self.__parse_if()
+                case "for":  # Add handling for 'for' keyword
+                    return self.__parse_for()
                 case _:
                     raise Exception(f"Keyword '{t.value}' is not implemented!")
 
@@ -266,6 +291,7 @@ class Parser:
                 break
         return IfNode(cond, ifBody, elseIfs, elseBody)
 
+    
     def __parse_expression(self) -> Node:
         """
         Parse an expression from the lexer.
@@ -280,6 +306,6 @@ class Parser:
         while not self.lexer.is_done():
             e = self.__parse_expression()
             program.expressions.append(e)
-        print("Parsed AST:")  # Debugging: Print the AST
-        print(program)
+        #print("Parsed AST:")  # Debugging: Print the AST
+        #print(program)
         return program

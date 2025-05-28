@@ -90,6 +90,18 @@ class BlockNode(Node):
     def formatted_str(self):
         return '{' + '; '.join(map(str, self.expressions)) + '}'
 
+class LazyRangeNode(Node):
+    """
+    A node for lazy range expressions (e.g., 1..10).
+    """
+    def __init__(self, start: Node, end: Node):
+        super().__init__("LazyRange")
+        self.start = start
+        self.end = end
+
+    def formatted_str(self):
+        return f"{self.start}..{self.end}"
+    
 class TupleNode(Node):
     """
     A tuple node in the abstract syntax tree.
@@ -148,6 +160,22 @@ class MapNode(Node):
 
     def formatted_str(self):
         return '#{' + ', '.join(map(lambda t: f"{t[0]}: {t[1]}", self.pairs.items())) + '}'
+    
+class ForNode(Node):
+        """
+        A for loop node in the abstract syntax tree.
+        """
+        def __init__(self, var_name: str, iterable: Node, body: Node):
+            """
+            Initialize a for loop node with a variable name, iterable, and body.
+            """
+            super().__init__("For")
+            self.var_name = var_name
+            self.iterable = iterable
+            self.body = body
+
+        def formatted_str(self):
+            return f"for {self.var_name} in {self.iterable} {self.body}"
 
 class UnaryNode(Node):
     """

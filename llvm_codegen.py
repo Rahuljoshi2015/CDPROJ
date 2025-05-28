@@ -1,5 +1,5 @@
 from llvmlite import ir, binding
-from myast import AtomicNode, BinaryNode, BlockNode, IfNode, LambdaNode, ListNode, MapNode, Node, ProgramNode, SliceNode, TupleNode, UnaryNode, CallNode
+from myast import AtomicNode, BinaryNode, BlockNode, IfNode, LambdaNode, ListNode, MapNode, Node, ProgramNode, SliceNode, TupleNode, UnaryNode, CallNode, ForNode,LazyRangeNode
 
 class LLVMCodeGenerator:
     def __init__(self):
@@ -40,7 +40,8 @@ class LLVMCodeGenerator:
         ir.Function(self.module, strcat_type, name="strcat")
 
     def _dprint(self, *args):
-        print(*args)
+        pass
+        #print(*args)
     
     def compile_ir(self):
         try:
@@ -121,6 +122,119 @@ class LLVMCodeGenerator:
             self._dprint(f"Completed assignment for: {var_name}, symbol_table keys: {list(self.symbol_table.keys())}")
         except Exception as e:
             raise Exception(f"Failed to generate assignment for {var_name} with expression {expr.right}: {str(e)}")
+        
+    def _generate_for(self, node: ForNode):
+        """
+        Generate LLVM IR for a for loop.
+        """
+        self._dprint(f"Generating for loop: for {node.var_name} in {node.iterable}")
+
+        # Generate the iterable
+        iterable = self._generate_expr(node.iterable)
+
+        # Initialize loop variables
+        index = self.builder.alloca(self.int_type, name=f"{node.var_name}_index")
+        self.builder.store(ir.Constant(self.int_type, 0), index)
+        loop_var = self.builder.alloca(self.float_type, name=node.var_name)
+        self.symbol_table[node.var_name] = loop_var
+
+        # Create loop blocks
+        loop_cond_block = self.func.append_basic_block(name=f"for_cond_{node.var_name}")
+        loop_body_block = self.func.append_basic_block(name=f"for_body_{node.var_name}")
+        loop_exit_block = self.func.append_basic_block(name=f"for_exit_{node.var_name}")
+
+        # Determine iterable type
+        if isinstance(iterable.type, ir.PointerType) and isinstance(iterable.type.pointee, ir.ArrayType):
+            # List iteration
+            list_size = ir.Constant(self.int_type, iterable.type.pointee.count)
+            array_ptr = iterable
+            self.builder.branch(loop_cond_block)
+
+            # Condition block
+            self.builder.position_at_end(loop_cond_block)
+            curr_index = self.builder.load(index, name=f"curr_index_{node.var_name}")
+            cond = self.builder.icmp_signed("<", curr_index, list_size, name=f"for_cond_{node.var_name}")
+            self.builder.cbranch(cond, loop_body_block, loop_exit_block)
+
+            # Body block
+            self.builder.position_at_end(loop_body_block)
+            # Load current element
+            elem_ptr = self.builder.gep(array_ptr, [ir.Constant(self.int_type, 0), curr_index], name=f"elem_ptr_{node.var_name}")
+            elem = self.builder.load(elem_ptr, name=f"elem_{node.var_name}")
+            if isinstance(elem.type, ir.IntType):
+                elem = self.builder.sitofp(elem, self.float_type, name=f"promote_elem_{node.var_name}")
+            self.builder.store(elem, loop_var)
+        elif isinstance(iterable.type, ir.PointerType) and isinstance(iterable.type.pointee, ir.LiteralStructType):
+            # Struct-based iteration
+            struct_type = iterable.type.pointee
+            if len(struct_type.elements) == 2 and all(isinstance(t, ir.IntType) for t in struct_type.elements):
+                # Lazy range {i32, i32}
+                start_ptr = self.builder.gep(iterable, [ir.Constant(self.int_type, 0), ir.Constant(self.int_type, 0)], name="range_start")
+                start = self.builder.load(start_ptr, name="range_start_load")
+                end_ptr = self.builder.gep(iterable, [ir.Constant(self.int_type, 0), ir.Constant(self.int_type, 1)], name="range_end")
+                end = self.builder.load(end_ptr, name="range_end_load")
+                start_float = self.builder.sitofp(start, self.float_type, name="start_float")
+                end_float = self.builder.sitofp(end, self.float_type, name="end_float")
+                self.builder.store(start_float, loop_var)
+                self.builder.branch(loop_cond_block)
+
+                # Condition block
+                self.builder.position_at_end(loop_cond_block)
+                curr_val = self.builder.load(loop_var, name=f"curr_val_{node.var_name}")
+                cond = self.builder.fcmp_ordered("<", curr_val, end_float, name=f"for_cond_{node.var_name}")
+                self.builder.cbranch(cond, loop_body_block, loop_exit_block)
+
+                # Body block
+                self.builder.position_at_end(loop_body_block)
+                # Current value is already in loop_var
+            elif len(struct_type.elements) == 2 and isinstance(struct_type.elements[0], ir.PointerType):
+                # Array-based range or list_filter {double*, i32}
+                array_ptr = self.builder.gep(iterable, [ir.Constant(self.int_type, 0), ir.Constant(self.int_type, 0)], name="range_array")
+                array_ptr = self.builder.load(array_ptr, name="range_array_load")
+                length_ptr = self.builder.gep(iterable, [ir.Constant(self.int_type, 0), ir.Constant(self.int_type, 1)], name="range_length")
+                list_size = self.builder.load(length_ptr, name="range_length_load")
+                self.builder.branch(loop_cond_block)
+
+                # Condition block
+                self.builder.position_at_end(loop_cond_block)
+                curr_index = self.builder.load(index, name=f"curr_index_{node.var_name}")
+                cond = self.builder.icmp_signed("<", curr_index, list_size, name=f"for_cond_{node.var_name}")
+                self.builder.cbranch(cond, loop_body_block, loop_exit_block)
+
+                # Body block
+                self.builder.position_at_end(loop_body_block)
+                elem_ptr = self.builder.gep(array_ptr, [curr_index], name=f"elem_ptr_{node.var_name}")
+                elem = self.builder.load(elem_ptr, name=f"elem_{node.var_name}")
+                self.builder.store(elem, loop_var)
+            else:
+                raise Exception(f"Unsupported struct type for iteration: {struct_type}")
+        else:
+            raise Exception(f"Unsupported iterable type for 'for' loop: {iterable.type}")
+
+        # Generate loop body
+        self._generate_expr(node.body)
+
+        # Increment index or value
+        if isinstance(iterable.type, ir.PointerType) and isinstance(iterable.type.pointee, ir.ArrayType):
+            next_index = self.builder.add(curr_index, ir.Constant(self.int_type, 1), name=f"next_index_{node.var_name}")
+            self.builder.store(next_index, index)
+        elif isinstance(iterable.type, ir.PointerType) and isinstance(iterable.type.pointee, ir.LiteralStructType):
+            if len(iterable.type.pointee.elements) == 2 and all(isinstance(t, ir.IntType) for t in iterable.type.pointee.elements):
+                curr_val = self.builder.load(loop_var, name=f"curr_val_{node.var_name}")
+                next_val = self.builder.fadd(curr_val, ir.Constant(self.float_type, 1.0), name=f"next_val_{node.var_name}")
+                self.builder.store(next_val, loop_var)
+            else:
+                next_index = self.builder.add(curr_index, ir.Constant(self.int_type, 1), name=f"next_index_{node.var_name}")
+                self.builder.store(next_index, index)
+        self.builder.branch(loop_cond_block)
+
+        # Position at exit block
+        self.builder.position_at_end(loop_exit_block)
+
+        # Remove loop variable from symbol table
+        self.symbol_table.pop(node.var_name, None)
+
+        return ir.Constant(self.int_type, 0)
 
     def _generate_expr(self, node):
         self._dprint(f"Generating expr: {node}")
@@ -162,6 +276,11 @@ class LLVMCodeGenerator:
             result = self._generate_list(node)
             self._dprint(f"List result: {result} (type: {result.type})")
             return result
+        elif isinstance(node, LazyRangeNode):
+            result = self._generate_lazy_range(node)
+            self._dprint(f"LazyRange result: {result} (type: {result.type})")
+            return result
+
         elif isinstance(node, MapNode):
             keys = list(node.pairs.keys())
             values = list(node.pairs.values())
@@ -215,6 +334,13 @@ class LLVMCodeGenerator:
             self.builder.store(ir.Constant(self.int_type, false_count), false_count_ptr)
             self.builder.store(ir.Constant(self.int_type, true_count), true_count_ptr)
             return result_alloca
+        
+        elif isinstance(node, ForNode):  # Add ForNode handling
+            result = self._generate_for(node)
+            self._dprint(f"For result: {result} (type: {result.type})")
+            return result
+        else:
+            raise Exception(f"Unhandled node type: {type(node)}")
 
     def _generate_list(self, node):
         """Generate LLVM IR for list literals"""
@@ -333,7 +459,7 @@ class LLVMCodeGenerator:
             elif node.operator == "INDEX":
                 return left_type.pointee.element
             elif node.operator == "RANGE":
-                 return ir.PointerType(ir.ArrayType(self.float_type, 0))  # Use float_type for consistency
+                return ir.PointerType(ir.LiteralStructType([ir.PointerType(self.float_type), self.int_type]))
         elif isinstance(node, UnaryNode):
             rhs_type = self._infer_type(node.rhs, symbol_table, recursion_stack)
             if node.operator == "NOT":
@@ -344,11 +470,16 @@ class LLVMCodeGenerator:
             callee_name = node.callee.value if isinstance(node.callee, AtomicNode) else node.callee
             if isinstance(node.callee, (str, AtomicNode)):
                 if callee_name in ["list_map", "list_filter"]:
-                    return ir.PointerType(ir.ArrayType(self.float_type, 0))
+                    return ir.PointerType(ir.LiteralStructType([ir.PointerType(self.float_type), self.int_type]))
                 elif callee_name == "list_reduce":
                     return self.float_type
                 elif callee_name == "list_group_by":
-                    return ir.PointerType(ir.ArrayType(self.float_type, 0))
+                    return ir.PointerType(ir.LiteralStructType([
+                        ir.ArrayType(self.float_type, 0),
+                        ir.ArrayType(self.float_type, 0),
+                        self.int_type,
+                        self.int_type
+                    ]))
                 elif callee_name in symbol_table and isinstance(symbol_table[callee_name], ir.Function):
                     return symbol_table[callee_name].type.pointee.return_type
                 else:
@@ -378,6 +509,12 @@ class LLVMCodeGenerator:
             return self._infer_type(node.expressions[-1], local_symbol_table, recursion_stack) if node.expressions else self.int_type
         elif isinstance(node, TupleNode):
             return [self._infer_type(element, symbol_table, recursion_stack) for element in node.elements]
+        elif isinstance(node, ForNode):
+            iterable_type = self._infer_type(node.iterable, symbol_table, recursion_stack)
+            temp_symbol_table = symbol_table.copy() if symbol_table else self.symbol_table.copy()
+            temp_symbol_table[node.var_name] = ir.PointerType(self.float_type)
+            self._infer_type(node.body, temp_symbol_table, recursion_stack)
+            return self.int_type
         elif isinstance(node, ListNode):
             if not node.elements:
                 return ir.PointerType(ir.ArrayType(self.int_type, 0))
@@ -390,6 +527,8 @@ class LLVMCodeGenerator:
                     else:
                         raise Exception("Incompatible list element types")
             return ir.PointerType(ir.ArrayType(element_type, len(node.elements)))
+        elif isinstance(node, LazyRangeNode):
+            return ir.PointerType(ir.LiteralStructType([self.int_type, self.int_type]))
         return self.int_type
 
     def _generate_if(self, node):
@@ -986,7 +1125,25 @@ class LLVMCodeGenerator:
     # ... (rest of _generate_binary unchanged) ...
 
     
-
+    def _generate_lazy_range(self, node: LazyRangeNode):
+        """
+        Generate LLVM IR for a lazy range (start..end).
+        """
+        self._dprint(f"Generating lazy range: {node.start}..{node.end}")
+        start = self._generate_expr(node.start)
+        end = self._generate_expr(node.end)
+        if not isinstance(start.type, ir.IntType) or not isinstance(end.type, ir.IntType):
+            raise Exception("Lazy range bounds must be integers")
+        
+        # Create range struct {i32, i32} for start and end
+        struct_type = ir.LiteralStructType([self.int_type, self.int_type])
+        struct_alloca = self.builder.alloca(struct_type, name="lazy_range_struct")
+        start_ptr = self.builder.gep(struct_alloca, [ir.Constant(self.int_type, 0), ir.Constant(self.int_type, 0)], name="range_start")
+        end_ptr = self.builder.gep(struct_alloca, [ir.Constant(self.int_type, 0), ir.Constant(self.int_type, 1)], name="range_end")
+        self.builder.store(start, start_ptr)
+        self.builder.store(end, end_ptr)
+        
+        return struct_alloca
     def _create_global_string(self, text):
         self.string_counter += 1
         name = f"str_{self.string_counter}"
